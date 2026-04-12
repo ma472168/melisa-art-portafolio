@@ -61,7 +61,7 @@ export default function Contacto() {
                 rel="noreferrer"
                 className="flex items-center gap-3 text-lg hover:opacity-70 transition-opacity"
               >
-                <Instagram className="w-5 h-5" /> @meloowie
+                <Instagram className="w-5 h-5" /> @meloowiee
               </a>
 
               <a
