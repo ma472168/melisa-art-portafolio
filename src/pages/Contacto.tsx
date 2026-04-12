@@ -56,7 +56,7 @@ export default function Contacto() {
 
             <div className="space-y-4">
               <a
-                href="https://instagram.com/meloowie"
+                href="https://instagram.com/meloowiee"
                 target="_blank"
                 rel="noreferrer"
                 className="flex items-center gap-3 text-lg hover:opacity-70 transition-opacity"
