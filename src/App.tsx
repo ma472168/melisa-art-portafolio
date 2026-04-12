@@ -57,8 +57,16 @@ export default function App() {
         </Routes>
         
         <footer className="py-20 px-6 border-t border-ink/5 text-center">
-          <p className="text-xs uppercase tracking-[0.4em] text-muted">
-            © {new Date().getFullYear()} Melisa Art Portfolio — All Rights Reserved
+          <p className="text-xs uppercase tracking-[0.25em] text-muted">
+            Programado por xenredda ·{' '}
+            <a
+              href="https://github.com/ma472168/melisa-art-portafolio"
+              target="_blank"
+              rel="noreferrer"
+              className="underline hover:opacity-70 transition-opacity"
+            >
+              Repositorio
+            </a>
           </p>
         </footer>
       </div>
