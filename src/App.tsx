@@ -10,6 +10,7 @@ import Navbar from '@/src/components/Navbar';
 import Home from '@/src/pages/Home';
 import ArtworkDetail from '@/src/pages/ArtworkDetail';
 import Semblanza from '@/src/pages/Semblanza';
+import Contacto from '@/src/pages/Contacto';
 import Login from '@/src/pages/Login';
 import Dashboard from '@/src/pages/Dashboard';
 
@@ -45,6 +46,7 @@ export default function App() {
           <Route path="/" element={<Home />} />
           <Route path="/artwork/:id" element={<ArtworkDetail />} />
           <Route path="/semblanza" element={<Semblanza />} />
+          <Route path="/contacto" element={<Contacto />} />
           <Route path="/login" element={<Login />} />
           <Route 
             path="/dashboard" 

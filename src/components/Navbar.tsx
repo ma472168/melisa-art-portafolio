@@ -37,6 +37,7 @@ export default function Navbar() {
         <div className="hidden md:flex items-center space-x-8">
           <Link to="/" className="text-sm uppercase tracking-widest hover:opacity-60 transition-opacity">Galería</Link>
           <Link to="/semblanza" className="text-sm uppercase tracking-widest hover:opacity-60 transition-opacity">Semblanza</Link>
+          <Link to="/contacto" className="text-sm uppercase tracking-widest hover:opacity-60 transition-opacity">Contacto</Link>
           {user ? (
             <div className="flex items-center space-x-6">
               <Link to="/dashboard" className="text-sm uppercase tracking-widest hover:opacity-60 transition-opacity flex items-center">
@@ -68,6 +69,7 @@ export default function Navbar() {
           >
             <Link to="/" onClick={() => setIsOpen(false)} className="text-lg uppercase tracking-widest">Galería</Link>
             <Link to="/semblanza" onClick={() => setIsOpen(false)} className="text-lg uppercase tracking-widest">Semblanza</Link>
+            <Link to="/contacto" onClick={() => setIsOpen(false)} className="text-lg uppercase tracking-widest">Contacto</Link>
             {user ? (
               <>
                 <Link to="/dashboard" onClick={() => setIsOpen(false)} className="text-lg uppercase tracking-widest">Dashboard</Link>
