@@ -4,28 +4,49 @@ import { Artwork, Profile } from '@/src/types';
 import { motion } from 'motion/react';
 import { Plus, Trash2, Edit2, X } from 'lucide-react';
 
+const createEmptyProfile = (id: string): Profile => ({
+  id,
+  full_name: '',
+  bio: '',
+  email: '',
+  avatar_url: '',
+});
+
 export default function Dashboard() {
   const [artworks, setArtworks] = useState<Artwork[]>([]);
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<Profile>(createEmptyProfile(''));
   const [loading, setLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState('');
   const [editingArtwork, setEditingArtwork] = useState<Partial<Artwork> | null>(null);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
+  const [isUploadingProfileImage, setIsUploadingProfileImage] = useState(false);
 
   const artworkBucket = import.meta.env.VITE_SUPABASE_ARTWORKS_BUCKET || 'artworks';
 
   useEffect(() => {
-    fetchData();
+    const initialize = async () => {
+      const { data } = await supabase.auth.getUser();
+      const userId = data.user?.id || '';
+      setCurrentUserId(userId);
+      await fetchData(userId);
+    };
+
+    initialize();
   }, []);
 
-  async function fetchData() {
+  async function fetchData(userId: string) {
     setLoading(true);
     const { data: artworksData } = await supabase.from('artworks').select('*').order('created_at', { ascending: false });
-    const { data: profileData } = await supabase.from('profiles').select('*').limit(1).single();
+    const { data: profileData, error: profileError } = userId
+      ? await supabase.from('profiles').select('*').eq('id', userId).single()
+      : { data: null, error: null };
     
     if (artworksData) setArtworks(artworksData);
-    if (profileData) setProfile(profileData);
+    if (profileData && !profileError) setProfile(profileData);
+    else if (userId) setProfile(createEmptyProfile(userId));
     setLoading(false);
   }
 
@@ -39,6 +60,25 @@ export default function Dashboard() {
     const userId = userResult.data.user?.id || 'public';
     const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
     const filePath = `${userId}/${Date.now()}-${safeName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from(artworkBucket)
+      .upload(filePath, file, {
+        upsert: true,
+        contentType: file.type || 'application/octet-stream',
+      });
+
+    if (uploadError) {
+      throw uploadError;
+    }
+
+    const { data } = supabase.storage.from(artworkBucket).getPublicUrl(filePath);
+    return data.publicUrl;
+  };
+
+  const uploadProfileImage = async (file: File): Promise<string> => {
+    const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const filePath = `profiles/${profile.id || currentUserId}/${Date.now()}-${safeName}`;
 
     const { error: uploadError } = await supabase.storage
       .from(artworkBucket)
@@ -93,7 +133,7 @@ export default function Dashboard() {
       } else {
         setEditingArtwork(null);
         setImageFile(null);
-        fetchData();
+        fetchData(currentUserId);
       }
     } catch (error: any) {
       alert('Error subiendo imagen: ' + (error?.message || 'Error desconocido'));
@@ -106,19 +146,37 @@ export default function Dashboard() {
     if (!confirm('¿Estás segura de que quieres eliminar esta obra?')) return;
     const { error } = await supabase.from('artworks').delete().eq('id', id);
     if (error) alert('Error eliminando obra: ' + error.message);
-    else fetchData();
+    else fetchData(currentUserId);
   };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile) return;
+    setIsUploadingProfileImage(true);
 
-    const { error } = await supabase.from('profiles').update(profile).eq('id', profile.id);
-    if (error) {
-      alert('Error guardando perfil: ' + error.message);
-    } else {
-      setIsEditingProfile(false);
-      fetchData();
+    try {
+      let avatarUrl = profile.avatar_url || '';
+      if (profileImageFile) {
+        avatarUrl = await uploadProfileImage(profileImageFile);
+      }
+
+      const profileToSave = {
+        ...profile,
+        id: currentUserId || profile.id,
+        avatar_url: avatarUrl,
+      };
+
+      const { error } = await supabase.from('profiles').upsert(profileToSave, { onConflict: 'id' });
+      if (error) {
+        alert('Error guardando perfil: ' + error.message);
+      } else {
+        setIsEditingProfile(false);
+        setProfileImageFile(null);
+        fetchData(currentUserId || profile.id);
+      }
+    } catch (error: any) {
+      alert('Error subiendo avatar: ' + (error?.message || 'Error desconocido'));
+    } finally {
+      setIsUploadingProfileImage(false);
     }
   };
 
@@ -159,8 +217,8 @@ export default function Dashboard() {
                   <label className="block text-[10px] uppercase tracking-widest text-muted mb-1">Nombre Completo</label>
                   <input
                     type="text"
-                    value={profile?.full_name || ''}
-                    onChange={(e) => setProfile(prev => prev ? { ...prev, full_name: e.target.value } : null)}
+                    value={profile.full_name}
+                    onChange={(e) => setProfile(prev => ({ ...prev, full_name: e.target.value }))}
                     className="w-full bg-paper/50 border border-ink/10 p-2 text-sm focus:border-ink outline-none"
                   />
                 </div>
@@ -168,41 +226,53 @@ export default function Dashboard() {
                   <label className="block text-[10px] uppercase tracking-widest text-muted mb-1">Email de Contacto</label>
                   <input
                     type="email"
-                    value={profile?.email || ''}
-                    onChange={(e) => setProfile(prev => prev ? { ...prev, email: e.target.value } : null)}
+                    value={profile.email}
+                    onChange={(e) => setProfile(prev => ({ ...prev, email: e.target.value }))}
                     className="w-full bg-paper/50 border border-ink/10 p-2 text-sm focus:border-ink outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] uppercase tracking-widest text-muted mb-1">URL Avatar</label>
+                  <label className="block text-[10px] uppercase tracking-widest text-muted mb-1">Imagen de Avatar</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setProfileImageFile(e.target.files?.[0] || null)}
+                    className="w-full text-sm"
+                  />
+                  <p className="mt-2 text-[10px] uppercase tracking-widest text-muted">O pega una URL manual</p>
                   <input
                     type="text"
-                    value={profile?.avatar_url || ''}
-                    onChange={(e) => setProfile(prev => prev ? { ...prev, avatar_url: e.target.value } : null)}
-                    className="w-full bg-paper/50 border border-ink/10 p-2 text-sm focus:border-ink outline-none"
+                    value={profile.avatar_url || ''}
+                    onChange={(e) => setProfile(prev => ({ ...prev, avatar_url: e.target.value }))}
+                    className="w-full bg-paper/50 border border-ink/10 p-2 text-sm focus:border-ink outline-none mt-2"
+                    placeholder="https://..."
                   />
                 </div>
                 <div>
                   <label className="block text-[10px] uppercase tracking-widest text-muted mb-1">Biografía</label>
                   <textarea
                     rows={8}
-                    value={profile?.bio || ''}
-                    onChange={(e) => setProfile(prev => prev ? { ...prev, bio: e.target.value } : null)}
+                    value={profile.bio}
+                    onChange={(e) => setProfile(prev => ({ ...prev, bio: e.target.value }))}
                     className="w-full bg-paper/50 border border-ink/10 p-2 text-sm focus:border-ink outline-none resize-none"
                   />
                 </div>
-                <button type="submit" className="w-full bg-ink text-paper py-3 uppercase tracking-widest text-[10px] hover:bg-ink/90 transition-colors">
-                  Guardar Cambios
+                <button
+                  type="submit"
+                  disabled={isUploadingProfileImage}
+                  className="w-full bg-ink text-paper py-3 uppercase tracking-widest text-[10px] hover:bg-ink/90 transition-colors disabled:opacity-60"
+                >
+                  {isUploadingProfileImage ? 'Subiendo avatar...' : 'Guardar Cambios'}
                 </button>
               </form>
             ) : (
               <div className="space-y-6">
                 <div className="aspect-square bg-ink/5 overflow-hidden rounded-full mb-6">
-                  <img src={profile?.avatar_url || 'https://picsum.photos/seed/artist/400/400'} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  <img src={profile.avatar_url || 'https://picsum.photos/seed/artist/400/400'} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                 </div>
-                <h3 className="text-lg font-serif">{profile?.full_name || 'Melisa'}</h3>
-                <p className="text-sm text-muted line-clamp-4 italic">{profile?.bio || 'Sin biografía.'}</p>
-                <p className="text-xs tracking-widest uppercase text-muted">{profile?.email}</p>
+                <h3 className="text-lg font-serif">{profile.full_name || 'Melisa'}</h3>
+                <p className="text-sm text-muted line-clamp-4 italic">{profile.bio || 'Sin biografía.'}</p>
+                <p className="text-xs tracking-widest uppercase text-muted">{profile.email}</p>
               </div>
             )}
           </div>

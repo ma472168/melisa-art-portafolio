@@ -36,7 +36,7 @@ export default function ArtworkDetail() {
   if (loading) return <div className="min-h-screen flex items-center justify-center italic font-serif">Cargando...</div>;
   if (!artwork) return <div className="min-h-screen flex items-center justify-center">Obra no encontrada.</div>;
 
-  const contactEmail = profile?.email || 'melisa@example.com';
+  const contactEmail = profile?.email || 'mxlymendozat@gmail.com';
   const mailtoLink = `mailto:${contactEmail}?subject=Consulta sobre la obra: ${artwork.title}`;
 
   return (
