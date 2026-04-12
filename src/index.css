@@ -1,0 +1,47 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Playfair Display", ui-serif, Georgia, serif;
+  
+  --color-paper: #fdfdfc;
+  --color-ink: #1a1a1a;
+  --color-muted: #71717a;
+}
+
+:root {
+  --color-paper: #fdfdfc;
+  --color-ink: #1a1a1a;
+  --color-muted: #71717a;
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.2);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-paper: #101214;
+    --color-ink: #f4f4f5;
+    --color-muted: #a1a1aa;
+    --glass-bg: rgba(32, 36, 40, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    color-scheme: dark;
+  }
+}
+
+@layer base {
+  body {
+    @apply bg-paper text-ink font-sans antialiased;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif;
+  }
+}
+
+.glass {
+  backdrop-filter: blur(12px);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+}
