@@ -10,6 +10,8 @@ export default function ArtworkDetail() {
   const [artwork, setArtwork] = useState<Artwork | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isZoomed, setIsZoomed] = useState(false);
+  const [zoomPosition, setZoomPosition] = useState({ x: 50, y: 50 });
 
   useEffect(() => {
     async function fetchData() {
@@ -39,6 +41,13 @@ export default function ArtworkDetail() {
   const contactEmail = profile?.email || 'mxlymendozat@gmail.com';
   const mailtoLink = `mailto:${contactEmail}?subject=Consulta sobre la obra: ${artwork.title}`;
 
+  const handleImageMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = ((event.clientX - rect.left) / rect.width) * 100;
+    const y = ((event.clientY - rect.top) / rect.height) * 100;
+    setZoomPosition({ x, y });
+  };
+
   return (
     <div className="pt-32 pb-20 px-6 max-w-7xl mx-auto">
       <Link to="/" className="inline-flex items-center text-sm uppercase tracking-widest mb-12 hover:opacity-60 transition-opacity">
@@ -49,12 +58,23 @@ export default function ArtworkDetail() {
         <motion.div 
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="bg-ink/5 aspect-[3/4] overflow-hidden"
+          className="bg-ink/5 aspect-[3/4] overflow-hidden cursor-zoom-in"
+          onMouseEnter={() => setIsZoomed(true)}
+          onMouseLeave={() => {
+            setIsZoomed(false);
+            setZoomPosition({ x: 50, y: 50 });
+          }}
+          onMouseMove={handleImageMouseMove}
         >
           <img
             src={artwork.image_url}
             alt={artwork.title}
             className="w-full h-full object-contain"
+            style={{
+              transform: isZoomed ? 'scale(2.2)' : 'scale(1)',
+              transformOrigin: `${zoomPosition.x}% ${zoomPosition.y}%`,
+              transition: isZoomed ? 'transform 120ms ease-out' : 'transform 260ms ease-out',
+            }}
             referrerPolicy="no-referrer"
           />
         </motion.div>
