@@ -38,12 +38,14 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  const [showFooter, setShowFooter] = useState(true);
+
   return (
     <Router>
       <div className="min-h-screen bg-paper selection:bg-ink selection:text-paper">
         <Navbar />
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<Home onFooterVisibilityChange={setShowFooter} />} />
           <Route path="/artwork/:id" element={<ArtworkDetail />} />
           <Route path="/semblanza" element={<Semblanza />} />
           <Route path="/contacto" element={<Contacto />} />
@@ -58,19 +60,21 @@ export default function App() {
           />
         </Routes>
         
-        <footer className="py-20 px-6 border-t border-ink/5 text-center">
-          <p className="text-xs uppercase tracking-[0.25em] text-muted">
-            Programado por xenredda ·{' '}
-            <a
-              href="https://github.com/ma472168/melisa-art-portafolio"
-              target="_blank"
-              rel="noreferrer"
-              className="underline hover:opacity-70 transition-opacity"
-            >
-              Repositorio
-            </a>
-          </p>
-        </footer>
+        {showFooter && (
+          <footer className="py-20 px-6 border-t border-ink/5 text-center">
+            <p className="text-xs uppercase tracking-[0.25em] text-muted">
+              Programado por xenredda ·{' '}
+              <a
+                href="https://github.com/ma472168/melisa-art-portafolio"
+                target="_blank"
+                rel="noreferrer"
+                className="underline hover:opacity-70 transition-opacity"
+              >
+                Repositorio
+              </a>
+            </p>
+          </footer>
+        )}
       </div>
     </Router>
   );
