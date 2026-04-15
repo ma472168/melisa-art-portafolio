@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/src/lib/supabase';
 import { Artwork } from '@/src/types';
 import { AnimatePresence, motion } from 'motion/react';
@@ -10,6 +10,8 @@ const FEATURED_FADE_MS = 700;
 type HomeProps = {
   onFooterVisibilityChange?: (visible: boolean) => void;
 };
+
+type GallerySortOption = 'recent' | 'year' | 'alphabetical';
 
 function pickRandomArtwork(artworks: Artwork[], currentId?: string) {
   if (artworks.length === 0) return null;
@@ -28,6 +30,36 @@ export default function Home({ onFooterVisibilityChange }: HomeProps) {
   const [featuredArtwork, setFeaturedArtwork] = useState<Artwork | null>(null);
   const [showGallery, setShowGallery] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [sortOption, setSortOption] = useState<GallerySortOption>('recent');
+
+  const sortedArtworks = useMemo(() => {
+    const list = [...artworks];
+
+    if (sortOption === 'alphabetical') {
+      return list.sort((a, b) => a.title.localeCompare(b.title, 'es', { sensitivity: 'base' }));
+    }
+
+    if (sortOption === 'year') {
+      return list.sort((a, b) => {
+        const yearA = Number.parseInt(a.year, 10);
+        const yearB = Number.parseInt(b.year, 10);
+        const safeYearA = Number.isNaN(yearA) ? Number.MIN_SAFE_INTEGER : yearA;
+        const safeYearB = Number.isNaN(yearB) ? Number.MIN_SAFE_INTEGER : yearB;
+
+        if (safeYearA !== safeYearB) {
+          return safeYearB - safeYearA;
+        }
+
+        return a.title.localeCompare(b.title, 'es', { sensitivity: 'base' });
+      });
+    }
+
+    return list.sort((a, b) => {
+      const recentA = new Date(a.created_at).getTime();
+      const recentB = new Date(b.created_at).getTime();
+      return recentB - recentA;
+    });
+  }, [artworks, sortOption]);
 
   useEffect(() => {
     async function fetchArtworks() {
@@ -182,34 +214,52 @@ export default function Home({ onFooterVisibilityChange }: HomeProps) {
               <p className="text-muted italic">Aún no hay obras en la galería.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-8 md:gap-12">
-              {artworks.map((artwork, index) => (
-                <motion.div
-                  key={artwork.id}
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.1 }}
-                  className="group cursor-pointer"
-                >
-                  <Link to={`/artwork/${artwork.id}`}>
-                    <div className="aspect-[2/3] md:aspect-[3/4] overflow-hidden bg-ink/5 mb-3 md:mb-6 relative">
-                      <img
-                        src={artwork.image_url}
-                        alt={artwork.title}
-                        className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105"
-                        referrerPolicy="no-referrer"
-                      />
-                      <div className="absolute inset-0 bg-ink/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-center justify-center">
-                        <span className="text-white uppercase tracking-widest text-xs border border-white/40 px-4 py-2">Ver Detalles</span>
+            <>
+              <div className="mb-8 flex justify-end">
+                <label className="text-xs uppercase tracking-[0.2em] text-muted flex items-center gap-3">
+                  Ordenar por
+                  <select
+                    value={sortOption}
+                    onChange={(event) => setSortOption(event.target.value as GallerySortOption)}
+                    className="bg-paper border border-ink/15 px-3 py-2 text-xs uppercase tracking-[0.12em] text-ink outline-none focus:border-ink/40"
+                    aria-label="Ordenar galería"
+                  >
+                    <option value="recent">Añadido recientemente</option>
+                    <option value="year">Por año</option>
+                    <option value="alphabetical">Orden alfabético</option>
+                  </select>
+                </label>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-8 md:gap-12">
+                {sortedArtworks.map((artwork, index) => (
+                  <motion.div
+                    key={artwork.id}
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: index * 0.1 }}
+                    className="group cursor-pointer"
+                  >
+                    <Link to={`/artwork/${artwork.id}`}>
+                      <div className="aspect-[2/3] md:aspect-[3/4] overflow-hidden bg-ink/5 mb-3 md:mb-6 relative">
+                        <img
+                          src={artwork.image_url}
+                          alt={artwork.title}
+                          className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105"
+                          referrerPolicy="no-referrer"
+                        />
+                        <div className="absolute inset-0 bg-ink/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-center justify-center">
+                          <span className="text-white uppercase tracking-widest text-xs border border-white/40 px-4 py-2">Ver Detalles</span>
+                        </div>
                       </div>
-                    </div>
-                    <h3 className="text-base md:text-xl font-serif mb-1 line-clamp-1">{artwork.title}</h3>
-                    <p className="text-muted text-xs md:text-sm italic line-clamp-1">{artwork.medium}, {artwork.year}</p>
-                  </Link>
-                </motion.div>
-              ))}
-            </div>
+                      <h3 className="text-base md:text-xl font-serif mb-1 line-clamp-1">{artwork.title}</h3>
+                      <p className="text-muted text-xs md:text-sm italic line-clamp-1">{artwork.medium}, {artwork.year}</p>
+                    </Link>
+                  </motion.div>
+                ))}
+              </div>
+            </>
           )}
         </div>
       )}
