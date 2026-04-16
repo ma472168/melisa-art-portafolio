@@ -85,7 +85,10 @@ export default function ArtworkDetail() {
           className="flex flex-col justify-center"
         >
           <h1 className="text-4xl md:text-6xl font-serif mb-4">{artwork.title}</h1>
-          <p className="text-muted italic mb-8">{artwork.medium}, {artwork.year}</p>
+          <p className="text-muted italic mb-8">
+            {artwork.discipline ? `${artwork.discipline} - ` : ''}
+            {artwork.medium}, {artwork.year}
+          </p>
           
           <div className="space-y-6 mb-12">
             <div>

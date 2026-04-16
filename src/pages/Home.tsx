@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/src/lib/supabase';
-import { Artwork } from '@/src/types';
+import { Artwork, Discipline } from '@/src/types';
 import { AnimatePresence, motion } from 'motion/react';
 import { Link } from 'react-router-dom';
 
@@ -12,6 +12,15 @@ type HomeProps = {
 };
 
 type GallerySortOption = 'recent' | 'year' | 'alphabetical';
+type DisciplineFilterOption = 'all' | Discipline;
+
+const DISCIPLINE_OPTIONS: { value: DisciplineFilterOption; label: string }[] = [
+  { value: 'all', label: 'Todas' },
+  { value: 'grabado', label: 'Grabado' },
+  { value: 'pintura', label: 'Pintura' },
+  { value: 'fotografia', label: 'Fotografia' },
+  { value: 'dibujo', label: 'Dibujo' },
+];
 
 function pickRandomArtwork(artworks: Artwork[], currentId?: string) {
   if (artworks.length === 0) return null;
@@ -31,8 +40,9 @@ export default function Home({ onFooterVisibilityChange }: HomeProps) {
   const [showGallery, setShowGallery] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sortOption, setSortOption] = useState<GallerySortOption>('recent');
+  const [disciplineFilter, setDisciplineFilter] = useState<DisciplineFilterOption>('all');
 
-  const sortedArtworks = useMemo(() => {
+  const visibleArtworks = useMemo(() => {
     const list = [...artworks];
 
     if (sortOption === 'alphabetical') {
@@ -54,12 +64,18 @@ export default function Home({ onFooterVisibilityChange }: HomeProps) {
       });
     }
 
-    return list.sort((a, b) => {
+    const sorted = list.sort((a, b) => {
       const recentA = new Date(a.created_at).getTime();
       const recentB = new Date(b.created_at).getTime();
       return recentB - recentA;
     });
-  }, [artworks, sortOption]);
+
+    if (disciplineFilter === 'all') {
+      return sorted;
+    }
+
+    return sorted.filter((artwork) => artwork.discipline === disciplineFilter);
+  }, [artworks, sortOption, disciplineFilter]);
 
   useEffect(() => {
     async function fetchArtworks() {
@@ -191,6 +207,30 @@ export default function Home({ onFooterVisibilityChange }: HomeProps) {
 
       {(!featuredArtwork || showGallery) && (
         <div className="pt-32 px-6 max-w-7xl mx-auto">
+          <div className="mb-10 flex flex-col gap-4">
+            <p className="text-muted uppercase tracking-[0.25em] text-[10px]">Disciplina</p>
+            <div className="flex flex-wrap gap-3">
+              {DISCIPLINE_OPTIONS.map((option) => {
+                const isActive = option.value === disciplineFilter;
+
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setDisciplineFilter(option.value)}
+                    className={`px-6 py-3 text-xs uppercase tracking-[0.2em] border transition-colors ${
+                      isActive
+                        ? 'bg-ink text-paper border-ink'
+                        : 'bg-paper text-ink border-ink/20 hover:border-ink/40'
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <header className="mb-20 text-center">
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
@@ -213,6 +253,10 @@ export default function Home({ onFooterVisibilityChange }: HomeProps) {
             <div className="text-center py-20 border border-dashed border-ink/10 rounded-lg">
               <p className="text-muted italic">Aún no hay obras en la galería.</p>
             </div>
+          ) : visibleArtworks.length === 0 ? (
+            <div className="text-center py-20 border border-dashed border-ink/10 rounded-lg">
+              <p className="text-muted italic">No hay obras cargadas para esta disciplina.</p>
+            </div>
           ) : (
             <>
               <div className="mb-8 flex justify-end">
@@ -232,7 +276,7 @@ export default function Home({ onFooterVisibilityChange }: HomeProps) {
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-8 md:gap-12">
-                {sortedArtworks.map((artwork, index) => (
+                {visibleArtworks.map((artwork, index) => (
                   <motion.div
                     key={artwork.id}
                     initial={{ opacity: 0, y: 30 }}
@@ -254,7 +298,10 @@ export default function Home({ onFooterVisibilityChange }: HomeProps) {
                         </div>
                       </div>
                       <h3 className="text-base md:text-xl font-serif mb-1 line-clamp-1">{artwork.title}</h3>
-                      <p className="text-muted text-xs md:text-sm italic line-clamp-1">{artwork.medium}, {artwork.year}</p>
+                      <p className="text-muted text-xs md:text-sm italic line-clamp-1">
+                        {artwork.discipline ? `${artwork.discipline} - ` : ''}
+                        {artwork.medium}, {artwork.year}
+                      </p>
                     </Link>
                   </motion.div>
                 ))}

@@ -1,8 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/src/lib/supabase';
-import { Artwork, Profile } from '@/src/types';
+import { Artwork, Discipline, Profile } from '@/src/types';
 import { motion } from 'motion/react';
 import { Plus, Trash2, Edit2, X } from 'lucide-react';
+
+const DISCIPLINE_OPTIONS: { value: Discipline; label: string }[] = [
+  { value: 'grabado', label: 'Grabado' },
+  { value: 'pintura', label: 'Pintura' },
+  { value: 'fotografia', label: 'Fotografia' },
+  { value: 'dibujo', label: 'Dibujo' },
+];
 
 const createEmptyProfile = (id: string): Profile => ({
   id,
@@ -115,6 +122,7 @@ export default function Dashboard() {
 
       const artworkToSave = {
         ...editingArtwork,
+        discipline: (editingArtwork.discipline || 'pintura') as Discipline,
         image_url: imageUrl,
         created_at: editingArtwork.id ? editingArtwork.created_at : new Date().toISOString(),
       };
@@ -192,7 +200,15 @@ export default function Dashboard() {
         <button
           onClick={() => {
             setImageFile(null);
-            setEditingArtwork({ title: '', description: '', image_url: '', medium: '', dimensions: '', year: new Date().getFullYear().toString() });
+            setEditingArtwork({
+              title: '',
+              description: '',
+              image_url: '',
+              discipline: 'pintura',
+              medium: '',
+              dimensions: '',
+              year: new Date().getFullYear().toString(),
+            });
           }}
           className="inline-flex items-center px-6 py-3 bg-ink text-paper uppercase tracking-widest text-xs hover:bg-ink/90 transition-colors"
         >
@@ -289,13 +305,16 @@ export default function Dashboard() {
                 </div>
                 <div className="flex-grow">
                   <h3 className="font-serif text-base md:text-lg line-clamp-1">{artwork.title}</h3>
-                  <p className="text-[10px] md:text-xs text-muted uppercase tracking-widest line-clamp-1">{artwork.medium}, {artwork.year}</p>
+                  <p className="text-[10px] md:text-xs text-muted uppercase tracking-widest line-clamp-1">
+                    {artwork.discipline ? `${artwork.discipline} - ` : ''}
+                    {artwork.medium}, {artwork.year}
+                  </p>
                 </div>
                 <div className="flex items-center gap-1 md:gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                   <button
                     onClick={() => {
                       setImageFile(null);
-                      setEditingArtwork(artwork);
+                      setEditingArtwork({ ...artwork, discipline: artwork.discipline || 'pintura' });
                     }}
                     className="p-1.5 md:p-2 hover:bg-ink/5 rounded-full transition-colors text-muted hover:text-ink"
                   >
@@ -368,6 +387,22 @@ export default function Dashboard() {
                     )}
                   </div>
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] uppercase tracking-widest text-muted mb-2">Disciplina</label>
+                <select
+                  required
+                  value={editingArtwork.discipline || 'pintura'}
+                  onChange={(e) => setEditingArtwork({ ...editingArtwork, discipline: e.target.value as Discipline })}
+                  className="w-full border-b border-ink/20 py-2 bg-transparent focus:border-ink outline-none transition-colors"
+                >
+                  {DISCIPLINE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
