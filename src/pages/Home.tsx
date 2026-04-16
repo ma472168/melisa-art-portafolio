@@ -13,6 +13,7 @@ type HomeProps = {
 
 type GallerySortOption = 'recent' | 'year' | 'alphabetical';
 type DisciplineFilterOption = 'all' | Discipline;
+const DISCIPLINE_PREVIEW_ROTATION_MS = 3800;
 
 const DISCIPLINE_OPTIONS: { value: DisciplineFilterOption; label: string }[] = [
   { value: 'all', label: 'Todas' },
@@ -34,13 +35,36 @@ function pickRandomArtwork(artworks: Artwork[], currentId?: string) {
   return nextArtwork;
 }
 
+function filterByDiscipline(artworks: Artwork[], discipline: DisciplineFilterOption) {
+  if (discipline === 'all') return artworks;
+  return artworks.filter((artwork) => artwork.discipline === discipline);
+}
+
+function pickRandomArtworkByDiscipline(
+  artworks: Artwork[],
+  discipline: DisciplineFilterOption,
+  currentId?: string,
+) {
+  const filtered = filterByDiscipline(artworks, discipline);
+  if (filtered.length > 0) {
+    return pickRandomArtwork(filtered, currentId);
+  }
+
+  return pickRandomArtwork(artworks, currentId);
+}
+
 export default function Home({ onFooterVisibilityChange }: HomeProps) {
   const [artworks, setArtworks] = useState<Artwork[]>([]);
   const [featuredArtwork, setFeaturedArtwork] = useState<Artwork | null>(null);
   const [showGallery, setShowGallery] = useState(false);
+  const [disciplineStepCompleted, setDisciplineStepCompleted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sortOption, setSortOption] = useState<GallerySortOption>('recent');
   const [disciplineFilter, setDisciplineFilter] = useState<DisciplineFilterOption>('all');
+  const [disciplinePreviewArtwork, setDisciplinePreviewArtwork] = useState<Artwork | null>(null);
+
+  const showDisciplineIntro = showGallery && artworks.length > 0 && !disciplineStepCompleted;
+  const showPortfolio = (!featuredArtwork || showGallery) && !showDisciplineIntro;
 
   const visibleArtworks = useMemo(() => {
     const list = [...artworks];
@@ -90,6 +114,7 @@ export default function Home({ onFooterVisibilityChange }: HomeProps) {
         const fetchedArtworks = data || [];
         setArtworks(fetchedArtworks);
         setFeaturedArtwork(pickRandomArtwork(fetchedArtworks));
+        setDisciplinePreviewArtwork(pickRandomArtwork(fetchedArtworks));
       }
       setLoading(false);
     }
@@ -98,7 +123,15 @@ export default function Home({ onFooterVisibilityChange }: HomeProps) {
   }, []);
 
   const handleEnterGallery = () => {
+    setDisciplineFilter('all');
+    setDisciplineStepCompleted(false);
+    setDisciplinePreviewArtwork(pickRandomArtwork(artworks));
     setShowGallery(true);
+  };
+
+  const handleSelectDiscipline = (option: DisciplineFilterOption) => {
+    setDisciplineFilter(option);
+    setDisciplineStepCompleted(true);
   };
 
   useEffect(() => {
@@ -138,6 +171,26 @@ export default function Home({ onFooterVisibilityChange }: HomeProps) {
       onFooterVisibilityChange(true);
     };
   }, [featuredArtwork, onFooterVisibilityChange, showGallery]);
+
+  useEffect(() => {
+    if (!showDisciplineIntro) return;
+
+    const timeoutId = window.setTimeout(() => {
+      const nextPreview = pickRandomArtworkByDiscipline(
+        artworks,
+        disciplineFilter,
+        disciplinePreviewArtwork?.id,
+      );
+
+      if (nextPreview) {
+        setDisciplinePreviewArtwork(nextPreview);
+      }
+    }, DISCIPLINE_PREVIEW_ROTATION_MS);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [artworks, disciplineFilter, disciplinePreviewArtwork, showDisciplineIntro]);
 
   if (loading) {
     return (
@@ -205,7 +258,74 @@ export default function Home({ onFooterVisibilityChange }: HomeProps) {
         </motion.section>
       )}
 
-      {(!featuredArtwork || showGallery) && (
+      {showDisciplineIntro && (
+        <section className="pt-32 px-6 max-w-7xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, ease: 'easeOut' }}
+            className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center"
+          >
+            <div className="order-2 lg:order-1">
+              <p className="text-muted uppercase tracking-[0.3em] text-[10px] mb-5">Antes de entrar</p>
+              <h2 className="font-serif text-4xl md:text-6xl leading-tight mb-6">Que disciplina quieres ver primero?</h2>
+              <p className="text-muted mb-8 max-w-xl">Te mostramos una vista previa con una obra al azar para inspirar tu recorrido.</p>
+              <div className="flex flex-wrap gap-3">
+                {DISCIPLINE_OPTIONS.map((option) => (
+                  <motion.button
+                    key={option.value}
+                    type="button"
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => handleSelectDiscipline(option.value)}
+                    className="px-6 py-3 text-xs uppercase tracking-[0.18em] border border-ink/20 hover:border-ink/45 transition-colors"
+                  >
+                    {option.label}
+                  </motion.button>
+                ))}
+              </div>
+            </div>
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.97 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.6, ease: 'easeOut' }}
+              className="order-1 lg:order-2"
+            >
+              <div className="relative aspect-[3/4] bg-ink/5 overflow-hidden">
+                <AnimatePresence mode="wait">
+                  {disciplinePreviewArtwork && (
+                    <motion.img
+                      key={disciplinePreviewArtwork.id}
+                      src={disciplinePreviewArtwork.image_url}
+                      alt={disciplinePreviewArtwork.title}
+                      className="w-full h-full object-cover"
+                      initial={{ opacity: 0, scale: 1.04 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.65, ease: 'easeInOut' }}
+                      referrerPolicy="no-referrer"
+                    />
+                  )}
+                </AnimatePresence>
+
+                {disciplinePreviewArtwork && (
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-ink/80 to-transparent p-6 text-paper">
+                    <p className="uppercase tracking-[0.2em] text-[10px] mb-2">Vista previa aleatoria</p>
+                    <h3 className="font-serif text-2xl mb-1 line-clamp-1">{disciplinePreviewArtwork.title}</h3>
+                    <p className="text-xs uppercase tracking-[0.12em] text-paper/85 line-clamp-1">
+                      {disciplinePreviewArtwork.discipline ? `${disciplinePreviewArtwork.discipline} - ` : ''}
+                      {disciplinePreviewArtwork.medium}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        </section>
+      )}
+
+      {showPortfolio && (
         <div className="pt-32 px-6 max-w-7xl mx-auto">
           <div className="mb-10 flex flex-col gap-4">
             <p className="text-muted uppercase tracking-[0.25em] text-[10px]">Disciplina</p>
