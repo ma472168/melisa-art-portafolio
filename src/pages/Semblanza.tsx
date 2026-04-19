@@ -63,7 +63,7 @@ export default function Semblanza() {
           className="md:col-span-2 space-y-8"
         >
           <h2 className="text-3xl font-serif">{profile?.full_name || 'Melisa'}</h2>
-          <div className="prose prose-lg text-ink/80 leading-relaxed font-light">
+          <div className="prose prose-lg text-ink/80 leading-relaxed font-light text-justify">
             {profile?.bio ? (
               profile.bio.split('\n').map((para, i) => (
                 <p key={i} className="mb-6">{para}</p>
